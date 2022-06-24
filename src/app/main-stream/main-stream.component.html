@@ -1,33 +1,24 @@
 <div class="page">
   <div class="page__container">
     <div class="main">
-      <div class="main__videos videos-main">
+      <div class="main__videos video-main">
         <span>
           <h3>Local Stream</h3>
-          <video class="videos-main__webcam" [src]="localStream" autoplay playsinline></video>
+          <video #localVideo class="video-main__webcam" autoplay playsinline></video>
         </span>
         <span>
           <h3>Remote Stream</h3>
-          <video class="videos-main__remote" [src]="remoteStream" autoplay playsinline></video>
+          <video #remoteVideo class="video-main__remote" autoplay playsinline [muted]="true"></video>
         </span>
       </div>
 
       <div class="main__settings settings-main">
-        <button mat-raised-button color="accent" (click)="getUserMedia()" [disabled]="startBtn">Start webcam</button>
+        <button mat-raised-button color="primary" (click)="showModal(false)" [disabled]="isCallStarted$ | async">Start Call{{isCallStarted$ | async}}</button>
 
-        <button mat-raised-button id="callButton" (click)="call()" [disabled]="callBtn">Create Call (offer)</button>
+        <button mat-raised-button (click)="showModal(true)" [disabled]="isCallStarted$ | async">Join Call{{isCallStarted$ | async}}</button>
 
-        <!-- <p>Answer the call from a different browser window or device</p> -->
-        
-        <form [formGroup]="createOffer" novalidate>
-          <mat-form-field appearance="outline">
-            <input matInput formControlName="call" [value]="value">
-          </mat-form-field>
-        </form>
-
-        <button mat-raised-button id="answerButton" (click)="answer()" [disabled]="answerBtn">Answer</button>
-
-        <button mat-raised-button id="hangupButton" [disabled]="hangupBtn">Hangup</button>
+        <mat-slide-toggle (change)="onScreenShare($event)">Share Screen</mat-slide-toggle>
+        <button mat-raised-button color="warn" (click)="endCall()" [disabled]="!(isCallStarted$ | async)">End Call{{isCallStarted$ | async}}</button>
       </div>
     </div>
   </div>

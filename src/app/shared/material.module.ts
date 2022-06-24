@@ -5,6 +5,10 @@ import { MatDialogModule } from '@angular/material/dialog';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatButtonModule } from '@angular/material/button';
+import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { FormsModule } from '@angular/forms';
+import { ClipboardModule } from '@angular/cdk/clipboard'
 
 @NgModule({
   imports: [
@@ -14,6 +18,10 @@ import { MatButtonModule } from '@angular/material/button';
     MatInputModule,
     MatIconModule,
     MatButtonModule,
+    FormsModule,
+    ClipboardModule,
+    MatSnackBarModule,
+    MatSlideToggleModule,
   ],
   exports: [
     MatDialogModule,
@@ -22,6 +30,10 @@ import { MatButtonModule } from '@angular/material/button';
     MatInputModule,
     MatIconModule,
     MatButtonModule,
+    FormsModule,
+    ClipboardModule,
+    MatSnackBarModule,
+    MatSlideToggleModule,
   ],
 })
 export class MaterialModule {}

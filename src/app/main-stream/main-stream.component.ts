@@ -1,148 +1,70 @@
-import { Component } from '@angular/core';
-import { Servers } from '../models/servers.model';
-import {
-  AngularFirestore,
-  AngularFirestoreDocument
-} from '@angular/fire/compat/firestore';
-import { FormGroup, FormControl } from '@angular/forms';
-import { Offer } from '../models/offer.model';
-import { map } from 'rxjs';
-import { Answer } from '../models/answer.model';
-
-const servers: Servers = {
-  iceServers: [
-    {
-      urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'],
-    },
-  ],
-  iceCandidatePoolSize: 10,
-}
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSlideToggleChange } from '@angular/material/slide-toggle';
+import { CallService } from '@core/services/call.service';
+import { filter, Observable, of, switchMap } from 'rxjs';
+import { DialogData } from '../models/dialog-data.model';
+import { CallInfoDialogComponent } from './components/callinfo-dialog/callinfo-dialog.component';
 
 @Component({
   selector: 'app-main-stream',
   templateUrl: './main-stream.component.html',
   styleUrls: ['./main-stream.component.scss']
 })
-export class MainStreamComponent {
-  startBtn = false;
-  callBtn = true;
-  answerBtn = true;
-  hangupBtn = true;
-  localStream: any;
-  remoteStream: any;
-  pc = new RTCPeerConnection(servers);
-  public createOffer: FormGroup;
-  public value = '';
+export class MainStreamComponent implements OnInit, OnDestroy {
+  public isCallStarted$: Observable<boolean>;
+  private peerId: string | null;
 
-  constructor(private firestore: AngularFirestore) {
-    this.createOffer = new FormGroup({
-      call: new FormControl(null),
-    })
+  @ViewChild('localVideo') localVideo!: ElementRef<HTMLVideoElement>;
+  @ViewChild('remoteVideo') remoteVideo!: ElementRef<HTMLVideoElement>;
+
+  constructor(public dialog: MatDialog, private callService: CallService) {
+    this.isCallStarted$ = this.callService.isCallStarted$;
+    this.peerId = this.callService.initPeer();
   }
 
-  async getUserMedia() {
-    this.localStream = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: true,
-    })
-
-    this.remoteStream = new MediaStream();
-
-    this.localStream.getTracks().forEach((track: MediaStreamTrack) => {
-      this.pc.addTrack(track, this.localStream);
-    })
-
-    this.pc.ontrack = (event: any) => {
-      event.streams[0].getTracks((track: MediaStreamTrack) => {
-        this.remoteStream.addTrack(track);
-      })
-    }
-
-    this.callBtn = false;
-    this.answerBtn = false;
-    this.startBtn = true;
+  ngOnInit(): void {
+    this.getStream();
   }
 
-  async call() {
-    const callDoc = this.firestore.collection('calls').doc();
-    const offerCandidates = callDoc.collection('offerCandidates');
-    const answerCandidates = callDoc.collection('answerCandidates');
+  public getStream() {
+    this.callService.localStream$
+      .pipe(filter((res: any) => !!res))
+      .subscribe((stream: MediaProvider | null) => { 
+        this.localVideo.nativeElement.srcObject = stream;
+      });
+    this.callService.remoteStream$
+      .pipe(filter((res: any) => !!res))
+      .subscribe((stream: MediaProvider | null) => {
+        this.remoteVideo.nativeElement.srcObject = stream
+      });
+  }
 
-    this.value = callDoc.ref.id;
+  ngOnDestroy(): void {
+    this.callService.destroyPeer();
+  }
 
-    this.pc.onicecandidate = (event: any) => {
-      // console.log('event', event);
-      // console.log('event.candidate', event.candidate);
-      event.candidate && offerCandidates.add(event.candidate.toJSON());
-    }
-
-    const offerDescription = await this.pc.createOffer();
-    await this.pc.setLocalDescription(offerDescription);
-
-    const offer: Offer = {
-      sdp: offerDescription.sdp,
-      type: offerDescription.type
-    }
-
-    await callDoc.set({offer});
-
-    callDoc.snapshotChanges().subscribe((snapshot) => {
-      const data: any = snapshot.payload.data();
-
-      if (!this.pc.currentRemoteDescription && data.answer) {
-        const answerDescription = new RTCSessionDescription(data.answer);
-        this.pc.setRemoteDescription(answerDescription);
-      }
-
-      answerCandidates.snapshotChanges().pipe(map((changes) => changes.map((change) => {
-
-        if (change.type === 'added') {
-          const candidate = new RTCIceCandidate(change.payload.doc.data());
-          this.pc.addIceCandidate(candidate);
-        }
-      })));
+  public showModal(joinCall: boolean): void {
+    let dialogData: DialogData = joinCall ? {peerId: undefined, joinCall: true} : {peerId: this.peerId!, joinCall: false};
+    const dialogRef = this.dialog.open(CallInfoDialogComponent, {
+      width: '250px',
+      data: dialogData
     });
 
-    this.hangupBtn = false;
+    dialogRef.afterClosed()
+      .pipe(
+        switchMap((peerId) => {
+          return joinCall ? of(this.callService.establishMediaCall(peerId)) : of(this.callService.enableCallAnswer());
+        }),
+      )
+      .subscribe(_ => {});
   }
 
-  async answer() {
-    const callId = this.value;
+  public onScreenShare($event: MatSlideToggleChange){
+    this.callService.shareScreen($event.checked);
+  }
 
-    const callDoc = this.firestore.collection('calls').doc(callId);
-    const answerCandidates = callDoc.collection('answerCandidates');
-    const offerCandidates = callDoc.collection('offerCandidates');
-    
-    this.pc.onicecandidate = (event: any) => {
-      event.candidate && answerCandidates.add(event.candidate.toJson());
-    }
-
-    let callData: any;
-    callDoc.get().subscribe((d) => {
-      callData = d.data();
-    })
-
-    if (callData) {
-      const offerDescription = callData.offer; 
-      await this.pc.setRemoteDescription(new RTCSessionDescription(offerDescription));
-    }
-
-    const answerDescription = await this.pc.createAnswer();
-    await this.pc.setLocalDescription(new RTCSessionDescription(answerDescription));
-
-    const answer: Answer = {
-      type: answerDescription.type,
-      sdp: answerDescription.sdp
-    }
-
-    await callDoc.update({answer});
-
-    offerCandidates.snapshotChanges().pipe(map((changes) => changes.map((change) => {
-
-      if (change.type === 'added') {
-        let data = change.payload.doc.data();
-        this.pc.addIceCandidate( new RTCIceCandidate(data));
-      }
-    })));
+  public endCall() {
+    this.callService.closeMediaCall();
   }
 }
