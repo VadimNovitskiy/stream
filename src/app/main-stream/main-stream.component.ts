@@ -1,4 +1,5 @@
 import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { FormControl } from '@angular/forms';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSlideToggleChange } from '@angular/material/slide-toggle';
 import { CallService } from '@core/services/call.service';
@@ -14,6 +15,10 @@ import { CallInfoDialogComponent } from './components/callinfo-dialog/callinfo-d
 export class MainStreamComponent implements OnInit, OnDestroy {
   public isCallStarted$: Observable<boolean>;
   private peerId: string | null;
+  public videoOn = true;
+  public audioOn = true;
+  autoRenew = new FormControl();
+  checked!: boolean;
 
   @ViewChild('localVideo') localVideo!: ElementRef<HTMLVideoElement>;
   @ViewChild('remoteVideo') remoteVideo!: ElementRef<HTMLVideoElement>;
@@ -24,6 +29,9 @@ export class MainStreamComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.isCallStarted$.subscribe((val) => {
+      console.log('isCallStarted$', val);
+    })
     this.getStream();
   }
 
@@ -61,7 +69,20 @@ export class MainStreamComponent implements OnInit, OnDestroy {
   }
 
   public onScreenShare($event: MatSlideToggleChange){
-    this.callService.shareScreen($event.checked);
+    this.callService.sharedScreen($event.checked);
+  }
+
+  public onVideoClick() {
+    this.videoOn = !this.videoOn;
+    if (this.checked) {
+      this.checked = this.videoOn;
+    }
+    this.callService.sharedVideo(this.videoOn);
+  }
+
+  public onAudioClick() {
+    this.audioOn = !this.audioOn;
+    this.callService.sharedAudio(this.audioOn);
   }
 
   public endCall() {

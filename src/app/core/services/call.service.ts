@@ -71,7 +71,8 @@ export class CallService {
       this.mediaCall.on('stream',
         (remoteStream) => {
           this.removedStreamBs = new BehaviorSubject(remoteStream);
-        });
+      });
+
       this.mediaCall.on('error', (err) => {
         this.snackBar.open(err.toString(), 'Close');
         console.error(err);
@@ -83,6 +84,9 @@ export class CallService {
       this.snackBar.open(err.toString(), 'Close');
       this.isCallStartedBs.next(false);
     }
+    this.peer.on('disconnected', () => {
+      console.log('disconect');
+    })
   }
 
   public async enableCallAnswer() {
@@ -113,18 +117,60 @@ export class CallService {
     }
   }
 
-  public async shareScreen(shared: boolean) {
+  public async sharedScreen(sharedScreen: boolean) {
     try {
-      if (shared) {
-        const stream = await navigator.mediaDevices.getDisplayMedia({video: true, audio: {
-          echoCancellation: true,
-          noiseSuppression: true
-        }});
-        this.localStreamBs.next(stream);
+      const video = this.localStreamBs?.value.getVideoTracks();
+      this.localStreamBs?.value.removeTrack(video[0]);
+      if (video.length > 0 && sharedScreen){
+        const screen = await navigator.mediaDevices.getDisplayMedia({video: true});
+        const videoTrack = screen.getVideoTracks()[0];
+        this.localStreamBs?.value.addTrack(videoTrack);
       } else {
-        const stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
-        this.localStreamBs.next(stream);
+        const videoCamera = await navigator.mediaDevices.getUserMedia({video: true});
+        const videoTrack = videoCamera.getVideoTracks()[0];
+        this.localStreamBs?.value.addTrack(videoTrack);
       }
+      console.log('treck', this.localStreamBs?.value.getTracks());
+    } catch (err: any) {
+      console.error(err);
+      this.snackBar.open(err.toString(), 'Close');
+      this.isCallStartedBs.next(false);
+    }
+  }
+
+  public async sharedVideo(sharedVideo: boolean) {
+    try {
+      const video = this.localStreamBs?.value.getVideoTracks();
+      if (video.length > 0 && sharedVideo){
+        return;
+      } else if (!video.length) {
+        const videoCamera = await navigator.mediaDevices.getUserMedia({video: true});
+        const videoTrack = videoCamera.getVideoTracks()[0];
+        this.localStreamBs?.value.addTrack(videoTrack);
+      } else {
+        this.localStreamBs?.value.removeTrack(video[0]);
+      }
+      console.log('treck', this.localStreamBs?.value.getTracks());
+    } catch (err: any) {
+      console.error(err);
+      this.snackBar.open(err.toString(), 'Close');
+      this.isCallStartedBs.next(false);
+    }
+  }
+
+  public async sharedAudio(sharedAudio: boolean) {
+    try {
+      const audio = this.localStreamBs?.value.getAudioTracks();
+      if (audio.length > 0 && sharedAudio){
+        return;
+      } else if (!audio.length) {
+        const audio = await navigator.mediaDevices.getUserMedia({audio: true});
+        const audioTrack = audio.getAudioTracks()[0];
+        this.localStreamBs?.value.addTrack(audioTrack);
+      } else {
+        this.localStreamBs?.value.removeTrack(audio[0]);
+      }
+      console.log('treck', this.localStreamBs?.value.getTracks());
     } catch (err: any) {
       console.error(err);
       this.snackBar.open(err.toString(), 'Close');
