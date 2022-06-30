@@ -1,47 +1,50 @@
-<div class="page">
-  <div class="page__container">
-    <div class="main">
-      <div class="main__videos video-main">
-        <span>
-          <h3>Local Stream</h3>
-          <video #localVideo class="video-main__webcam" poster="assets/images/video-poster.jpg" autoplay playsinline></video>
-        </span>
-        <span>
-          <h3>Remote Stream</h3>
-          <video #remoteVideo class="video-main__remote" poster="assets/images/video-poster.jpg" autoplay playsinline [muted]="true"></video>
-        </span>
-      </div>
-
-      <div class="main__settings settings-main">
-        <button mat-raised-button color="primary" (click)="showModal(false)" [disabled]="isCallStarted$ | async">Start Call{{isCallStarted$ | async}}</button>
-
-        <button mat-raised-button (click)="showModal(true)" [disabled]="isCallStarted$ | async">Join Call</button>
-        <button mat-fab [color]="videoOn ? 'primary' : 'warn'" (click)="onVideoClick()" [disabled]="!(isCallStarted$ | async)">
-          <span *ngIf="videoOn">
-            <mat-icon>videocam</mat-icon>
+<div class="wrapper">
+  <div class="page">
+    <div class="container">
+      <div class="main">
+        <div #videos class="videos">
+          <!-- <video #localVideo class="video" autoplay playsinline></video> -->
+          <!-- <span>
+            <h3>Local Stream</h3>
+            <video #localVideo class="video-main__webcam" poster="assets/images/video-poster.jpg" autoplay playsinline></video>
           </span>
-          <span *ngIf="!videoOn">
-            <mat-icon>videocam_off</mat-icon>
-          </span>
-        </button>
-        <button mat-fab [color]="audioOn ? 'primary' : 'warn'" (click)="onAudioClick()" [disabled]="!(isCallStarted$ | async)">
-          <span *ngIf="audioOn">
-            <mat-icon>volume_up</mat-icon>
-          </span>
-          <span *ngIf="!audioOn">
-            <mat-icon>volume_off</mat-icon>
-          </span>
-        </button>
-
-        <mat-slide-toggle 
-          (change)="onScreenShare($event)" 
-          [checked]="checked"
-          [formControl]="autoRenew" 
-          [disabled]="!videoOn || !(isCallStarted$ | async)"
-          [(ngModel)]="checked" >Share Screen
-        </mat-slide-toggle>
-        <button mat-raised-button color="warn" (click)="endCall()" [disabled]="!(isCallStarted$ | async)">End Call{{isCallStarted$ | async}}</button>
+          <span>
+            <h3>Remote Stream</h3>
+            <video #remoteVideo class="video-main__remote" poster="assets/images/video-poster.jpg" autoplay playsinline [muted]="true"></video>
+          </span> -->
+        </div>
       </div>
     </div>
+  </div>
+  <div class="settings">
+    <button mat-raised-button color="primary" (click)="showModal(false)" [disabled]="isCallStarted$ | async">Start Call{{isCallStarted$ | async}}</button>
+  
+    <button mat-raised-button (click)="showModal(true)" [disabled]="isCallStarted$ | async">Join Call</button>
+    <button mat-fab [color]="videoOn ? 'primary' : 'warn'" (click)="onVideoClick()" [disabled]="!(isCallStarted$ | async)">
+      <span *ngIf="videoOn">
+        <mat-icon>videocam</mat-icon>
+      </span>
+      <span *ngIf="!videoOn">
+        <mat-icon>videocam_off</mat-icon>
+      </span>
+    </button>
+    <button mat-fab [color]="audioOn ? 'primary' : 'warn'" (click)="onAudioClick()" [disabled]="!(isCallStarted$ | async)">
+      <span *ngIf="audioOn">
+        <mat-icon>volume_up</mat-icon>
+      </span>
+      <span *ngIf="!audioOn">
+        <mat-icon>volume_off</mat-icon>
+      </span>
+    </button>
+  
+    
+    <mat-slide-toggle 
+      (change)="onScreenShare($event)" 
+      [(ngModel)]="checked"
+      [disabled]="!(isCallStarted$ | async) || !videoOn">Share Screen
+    </mat-slide-toggle>
+    
+    <button mat-raised-button color="warn" (click)="endCall()" [disabled]="!(isCallStarted$ | async)">End Call{{isCallStarted$ | async}}</button>
+  
   </div>
 </div>

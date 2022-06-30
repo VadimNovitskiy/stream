@@ -32,9 +32,9 @@ $mainDarkColor: #141414;
 // Минимальная ширина страницы
 $minWidth: 320;
 // Ширина полотна (макета)
-$maxWidth: 1440;
+$maxWidth: 1640;
 // Ширина ограничивающего контейнера (0 = нет ограничения)
-$maxWidthContainer: 0;
+$maxWidthContainer: 1440;
 // Общий отступ у контейнера
 // (30 = по 15px слева и справа, 0 = нет отступа)
 $containerPadding: 30;
@@ -98,7 +98,7 @@ body {
 */
 @if ($responsiveType==1) {
 	// Отзывчивая
-	[class*="__container"] {
+	[class*="container"] {
 		@if ($maxWidthContainer>0) {
 			max-width: rem($maxWidthContainer);
 			box-sizing: content-box;
@@ -110,7 +110,7 @@ body {
 	}
 } @else {
 	// По брейк-поинтам
-	[class*="__container"] {
+	[class*="container"] {
 		margin: 0 auto;
 		@if ($maxWidthContainer>0) {
 			max-width: rem($maxWidthContainer);

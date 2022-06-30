@@ -1,53 +1,31 @@
 @import "/src/assets/scss/_style";
 
-video {
-  width: 40vw;
-  height: 30vw;
-  margin: 2rem;
-  background: black;
-}
-h3 {
-  margin: 2rem 0px 0px 2rem;
-}
 .page {
-  padding: 0 20px;
-
-  // .page__container
-
-  &__container {
-    // margin: 0 auto;
-  }
+  flex: 1 1 auto;
+  margin-top: rem(50);
 }
+
 .main {
-
-  // .main__videos
-
-  &__videos {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-
-  // .main__settings
-
-  &__settings {
-  }
 }
-.video-main {
 
-  // .videos-main__webcam
-
-  &__webcam {
-  }
-
-  // .videos-main__remote
-
-  &__remote {
-  }
+.videos {
+  display: grid;
+  gap: rem(20);
+  grid-template-columns: repeat(auto-fit, minmax(rem(500), 1fr));
+  justify-items: center;
 }
-.settings-main {
+.video {
+  display: flex;
+  flex-direction: column;
+  background: black;
+  width: rem(600);
+  height: rem(400);
+}
+
+.settings {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: rem(40);
+  margin: rem(50) 0;
 }

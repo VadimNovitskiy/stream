@@ -10,6 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 export class CallService {
   private peer!: Peer;
   private mediaCall!: MediaConnection;
+  private peerId!: string;
 
   private localStreamBs: BehaviorSubject<any> =  new BehaviorSubject(null);
   public localStream$ = this.localStreamBs as Observable<MediaStream>;
@@ -49,9 +50,10 @@ export class CallService {
   }
 
   public async establishMediaCall(remotePeerId: string) {
-    console.log('establishMediaCall', remotePeerId);
+    console.log('establishMediaCall');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
+      this.peerId = remotePeerId;
 
       const connection = this.peer.connect(remotePeerId);
       connection.on('error', (err) => {
@@ -65,12 +67,11 @@ export class CallService {
         this.snackBar.open(errorMessage, 'Close');
         throw new Error(errorMessage); 
       }
-      this.localStreamBs = new BehaviorSubject(stream);
+      this.localStreamBs.next(stream);
       this.isCallStartedBs.next(true);
 
-      this.mediaCall.on('stream',
-        (remoteStream) => {
-          this.removedStreamBs = new BehaviorSubject(remoteStream);
+      this.mediaCall.on('stream', (remoteStream) => {
+        this.removedStreamBs.next(remoteStream);
       });
 
       this.mediaCall.on('error', (err) => {
@@ -84,9 +85,6 @@ export class CallService {
       this.snackBar.open(err.toString(), 'Close');
       this.isCallStartedBs.next(false);
     }
-    this.peer.on('disconnected', () => {
-      console.log('disconect');
-    })
   }
 
   public async enableCallAnswer() {
@@ -99,7 +97,10 @@ export class CallService {
         this.isCallStartedBs.next(true);
 
         this.mediaCall.answer(stream);
+
         this.mediaCall.on('stream', (remoteStream) => {
+          // `stream` is the MediaStream of the remote peer.
+	        // Here you'd add it to an HTML video/canvas element.
           this.removedStreamBs.next(remoteStream);
         });
         this.mediaCall.on('error', (err) => {
@@ -109,7 +110,6 @@ export class CallService {
         });
         this.mediaCall.on('close', () => this.onCallClose());
       })
-
     } catch (err: any) {
       console.error(err);
       this.snackBar.open(err.toString(), 'Close');
@@ -119,17 +119,30 @@ export class CallService {
 
   public async sharedScreen(sharedScreen: boolean) {
     try {
-      const video = this.localStreamBs?.value.getVideoTracks();
-      this.localStreamBs?.value.removeTrack(video[0]);
-      if (video.length > 0 && sharedScreen){
-        const screen = await navigator.mediaDevices.getDisplayMedia({video: true});
-        const videoTrack = screen.getVideoTracks()[0];
-        this.localStreamBs?.value.addTrack(videoTrack);
+      let stream: MediaStream;
+      // this.localStreamBs?.value.getTracks().forEach((track: MediaStreamTrack) => {
+      //   this.localStreamBs?.value.removeTrack(track);
+      // })
+      if (sharedScreen){
+        stream = await navigator.mediaDevices.getDisplayMedia({audio: true, video: true});
       } else {
-        const videoCamera = await navigator.mediaDevices.getUserMedia({video: true});
-        const videoTrack = videoCamera.getVideoTracks()[0];
-        this.localStreamBs?.value.addTrack(videoTrack);
+        stream = await navigator.mediaDevices.getUserMedia({audio: true, video: true});
       }
+      this.mediaCall.peerConnection?.getSenders().map((sender) => {
+        if (sender.track?.kind == 'audio') {
+          if (this.localStreamBs?.value.getAudioTracks().length > 0 && stream) {
+            sender.replaceTrack(stream.getAudioTracks()[0]);
+          }
+        }
+        if (sender.track?.kind == 'video') {
+          if (this.localStreamBs?.value.getVideoTracks().length > 0 && stream) {
+            sender.replaceTrack(stream.getVideoTracks()[0]);
+            const video = this.localStreamBs?.value.getVideoTracks();
+            this.localStreamBs?.value.removeTrack(video[0]);
+            this.localStreamBs?.value.addTrack(stream.getVideoTracks()[0]);
+          }
+        }
+      })
       console.log('treck', this.localStreamBs?.value.getTracks());
     } catch (err: any) {
       console.error(err);
@@ -140,16 +153,16 @@ export class CallService {
 
   public async sharedVideo(sharedVideo: boolean) {
     try {
-      const video = this.localStreamBs?.value.getVideoTracks();
-      if (video.length > 0 && sharedVideo){
-        return;
-      } else if (!video.length) {
-        const videoCamera = await navigator.mediaDevices.getUserMedia({video: true});
-        const videoTrack = videoCamera.getVideoTracks()[0];
-        this.localStreamBs?.value.addTrack(videoTrack);
-      } else {
-        this.localStreamBs?.value.removeTrack(video[0]);
-      }
+      this.mediaCall.peerConnection?.getSenders().map((sender) => {
+        if (sender.track?.kind == 'video') {
+          sender.track.enabled = sharedVideo;
+        }
+      });
+      this.localStreamBs?.value.getTracks().forEach((track: MediaStreamTrack) => {
+        if (track.kind === 'video') {
+          track.enabled = sharedVideo;
+        }
+      })
       console.log('treck', this.localStreamBs?.value.getTracks());
     } catch (err: any) {
       console.error(err);
@@ -160,16 +173,16 @@ export class CallService {
 
   public async sharedAudio(sharedAudio: boolean) {
     try {
-      const audio = this.localStreamBs?.value.getAudioTracks();
-      if (audio.length > 0 && sharedAudio){
-        return;
-      } else if (!audio.length) {
-        const audio = await navigator.mediaDevices.getUserMedia({audio: true});
-        const audioTrack = audio.getAudioTracks()[0];
-        this.localStreamBs?.value.addTrack(audioTrack);
-      } else {
-        this.localStreamBs?.value.removeTrack(audio[0]);
-      }
+      this.mediaCall.peerConnection?.getSenders().map((sender) => {
+        if (sender.track?.kind == 'audio') {
+          sender.track.enabled = sharedAudio;
+        }
+      });
+      this.localStreamBs?.value.getTracks().forEach((track: MediaStreamTrack) => {
+        if (track.kind === 'audio') {
+          track.enabled = sharedAudio;
+        }
+      })
       console.log('treck', this.localStreamBs?.value.getTracks());
     } catch (err: any) {
       console.error(err);
