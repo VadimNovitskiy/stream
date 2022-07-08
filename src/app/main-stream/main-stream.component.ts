@@ -18,6 +18,9 @@ export class MainStreamComponent implements OnInit, OnDestroy {
   public audioOn = true;
   checked = false;
 
+  public sentBytes: any;
+  public receivedBytes: any;
+
   @ViewChild('videos') videos!: ElementRef;
 
   constructor(
@@ -27,6 +30,13 @@ export class MainStreamComponent implements OnInit, OnDestroy {
     ) {
     this.isCallStarted$ = this.callService.isCallStarted$;
     this.peerId = this.callService.initPeer();
+
+    this.callService.bytesSent.subscribe((bytes) => {
+      this.sentBytes = bytes;
+    })
+    this.callService.bytesReceived.subscribe((bytes) => {
+      this.receivedBytes = bytes;
+    });
   }
 
   ngOnInit(): void {
@@ -110,6 +120,20 @@ export class MainStreamComponent implements OnInit, OnDestroy {
   public onAudioClick() {
     this.audioOn = !this.audioOn;
     this.callService.sharedAudio(this.audioOn);
+  }
+
+  public changeQuality(value: string) {
+    switch (value) {
+      case '1280':
+        this.callService.applyConstraints(1280, 720);
+        break;
+        case '720': 
+        this.callService.applyConstraints(720, 480);
+        break;
+        case '480': 
+        this.callService.applyConstraints(480, 360);
+        break;
+    }
   }
 
   public endCall() {

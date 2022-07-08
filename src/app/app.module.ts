@@ -10,7 +10,7 @@ import { environment } from '@environments/environment';
 
 import { AngularFireModule } from '@angular/fire/compat';
 import { AngularFireDatabaseModule } from '@angular/fire/compat/database';
-import { ReactiveFormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { CallInfoDialogComponent } from './main-stream/components/callinfo-dialog/callinfo-dialog.component';
 
 @NgModule({
@@ -27,6 +27,7 @@ import { CallInfoDialogComponent } from './main-stream/components/callinfo-dialo
     AngularFireModule.initializeApp(environment.firebase),
     AngularFireDatabaseModule,
     ReactiveFormsModule,
+    FormsModule,
   ],
   providers: [],
   bootstrap: [AppComponent]

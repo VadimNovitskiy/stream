@@ -1,17 +1,8 @@
 <div class="wrapper">
   <div class="page">
-    <div class="container">
+    <div class="_container">
       <div class="main">
         <div #videos class="videos">
-          <!-- <video #localVideo class="video" autoplay playsinline></video> -->
-          <!-- <span>
-            <h3>Local Stream</h3>
-            <video #localVideo class="video-main__webcam" poster="assets/images/video-poster.jpg" autoplay playsinline></video>
-          </span>
-          <span>
-            <h3>Remote Stream</h3>
-            <video #remoteVideo class="video-main__remote" poster="assets/images/video-poster.jpg" autoplay playsinline [muted]="true"></video>
-          </span> -->
         </div>
       </div>
     </div>
@@ -45,6 +36,19 @@
     </mat-slide-toggle>
     
     <button mat-raised-button color="warn" (click)="endCall()" [disabled]="!(isCallStarted$ | async)">End Call{{isCallStarted$ | async}}</button>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Video quality</mat-label>
+      <mat-select (selectionChange)="changeQuality($event.value)" value="720">
+        <mat-option value="1280">1280p</mat-option>
+        <mat-option value="720">720p</mat-option>
+        <mat-option value="480">480p</mat-option>
+      </mat-select>
+    </mat-form-field>
   
+    <div class="bitrade">
+      <div class="sent">Bytes sent: {{sentBytes}} Kbps</div>
+      <div class="reseived">Bytes received: {{receivedBytes}} Kbps</div>
+    </div>
   </div>
 </div>

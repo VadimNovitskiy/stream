@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import Peer, { MediaConnection, PeerJSOption } from 'peerjs';
-import { BehaviorSubject, Observable, Subject } from 'rxjs';
+import { BehaviorSubject, defer, from, interval, Observable, Subject } from 'rxjs';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable({
@@ -10,15 +10,23 @@ import { v4 as uuidv4 } from 'uuid';
 export class CallService {
   private peer!: Peer;
   private mediaCall!: MediaConnection;
-  private peerId!: string;
 
   private localStreamBs: BehaviorSubject<any> =  new BehaviorSubject(null);
   public localStream$ = this.localStreamBs as Observable<MediaStream>;
   private removedStreamBs: BehaviorSubject<any> =  new BehaviorSubject(null);
   public remoteStream$ = this.removedStreamBs as Observable<MediaStream>;
+  
+  private localMessageBs: BehaviorSubject<any> =  new BehaviorSubject(null);
+  public localMessage$ = this.localMessageBs as Observable<string>;
+  private removedMessageBs: BehaviorSubject<any> =  new BehaviorSubject(null);
+  public remoteMessage$ = this.removedMessageBs as Observable<string>;
 
   private isCallStartedBs = new Subject<boolean>();
   public isCallStarted$ = this.isCallStartedBs as Observable<boolean>;
+
+  public bytesSent = new BehaviorSubject(0);
+  public bytesReceived = new BehaviorSubject(0);
+  public bitrade!: any;
 
   constructor(private snackBar: MatSnackBar) {}
 
@@ -52,10 +60,28 @@ export class CallService {
   public async establishMediaCall(remotePeerId: string) {
     console.log('establishMediaCall');
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
-      this.peerId = remotePeerId;
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: {ideal: 720},
+          height: {ideal: 480}
+        }, 
+        audio: true
+      });
 
       const connection = this.peer.connect(remotePeerId);
+
+      this.peer.on('connection', (peerjsConnection) => {
+        peerjsConnection.on('open', () => {
+          peerjsConnection.on('data', function(data) {
+            console.log('Received', data);
+          });
+
+          peerjsConnection.send('Hello from markers-page!');
+        })
+
+        connection.send('Hello from received')
+      })
+
       connection.on('error', (err) => {
         console.error(err);
         this.snackBar.open(err.toString(), 'Close');
@@ -67,10 +93,13 @@ export class CallService {
         this.snackBar.open(errorMessage, 'Close');
         throw new Error(errorMessage); 
       }
-      this.localStreamBs.next(stream);
+      let videoStream = new MediaStream;
+      videoStream.addTrack(stream.getVideoTracks()[0]);
+      this.localStreamBs.next(videoStream);
       this.isCallStartedBs.next(true);
 
       this.mediaCall.on('stream', (remoteStream) => {
+        this.getBitrate();
         this.removedStreamBs.next(remoteStream);
       });
 
@@ -90,8 +119,18 @@ export class CallService {
   public async enableCallAnswer() {
     console.log('enableCallAnswer');
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
-      this.localStreamBs.next(stream);
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: {ideal: 720},
+          height: {ideal: 480}
+        }, 
+        audio: true
+      });
+
+      let videoStream = new MediaStream;
+      videoStream.addTrack(stream.getVideoTracks()[0]);
+      this.localStreamBs.next(videoStream);
+      
       this.peer.on('call', async (call) => {
         this.mediaCall = call;
         this.isCallStartedBs.next(true);
@@ -101,6 +140,8 @@ export class CallService {
         this.mediaCall.on('stream', (remoteStream) => {
           // `stream` is the MediaStream of the remote peer.
 	        // Here you'd add it to an HTML video/canvas element.
+
+          this.getBitrate();
           this.removedStreamBs.next(remoteStream);
         });
         this.mediaCall.on('error', (err) => {
@@ -109,6 +150,9 @@ export class CallService {
           this.isCallStartedBs.next(false);
         });
         this.mediaCall.on('close', () => this.onCallClose());
+      })
+      this.peer.on('connection', (conn) => {
+        conn.send('Hello from ...')
       })
     } catch (err: any) {
       console.error(err);
@@ -124,9 +168,21 @@ export class CallService {
       //   this.localStreamBs?.value.removeTrack(track);
       // })
       if (sharedScreen){
-        stream = await navigator.mediaDevices.getDisplayMedia({audio: true, video: true});
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          audio: true, 
+          video: {
+            width: {ideal: 720},
+            height: {ideal: 480}
+          }
+        });
       } else {
-        stream = await navigator.mediaDevices.getUserMedia({audio: true, video: true});
+        stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: {ideal: 720},
+          height: {ideal: 480}
+        }, 
+        audio: true
+      });
       }
       this.mediaCall.peerConnection?.getSenders().map((sender) => {
         if (sender.track?.kind == 'audio') {
@@ -155,6 +211,7 @@ export class CallService {
     try {
       this.mediaCall.peerConnection?.getSenders().map((sender) => {
         if (sender.track?.kind == 'video') {
+          console.log('sender', sender);
           sender.track.enabled = sharedVideo;
         }
       });
@@ -174,6 +231,7 @@ export class CallService {
   public async sharedAudio(sharedAudio: boolean) {
     try {
       this.mediaCall.peerConnection?.getSenders().map((sender) => {
+        console.log('Sender', sender);
         if (sender.track?.kind == 'audio') {
           sender.track.enabled = sharedAudio;
         }
@@ -191,6 +249,42 @@ export class CallService {
     }
   }
 
+  private async getBitrate() {
+    let beforeBytesSent = 0;
+    let beforeBytesReceived = 0;
+    this.bitrade = interval(1000).subscribe(() => {
+      const peerStatus = (defer(() => from(this.mediaCall.peerConnection.getStats())));
+      peerStatus.subscribe((status: RTCStatsReport) => {
+        
+        status.forEach((res) => {
+
+          if (res.id === 'RTCTransport_0_1') {
+            let bytesSentOnSeconds = res.bytesSent - beforeBytesSent;
+            beforeBytesSent = res.bytesSent;
+            let bytesReceivedOnSeconds = res.bytesReceived - beforeBytesReceived;
+            beforeBytesReceived = res.bytesReceived;
+
+            this.bytesSent.next(bytesSentOnSeconds / 10000);
+            this.bytesReceived.next(bytesReceivedOnSeconds / 10000);
+          }
+        });
+      });
+    })
+  }
+
+  public applyConstraints(width: number, height: number) {
+    this.localStreamBs?.value.getTracks().forEach((track: MediaStreamTrack) => {
+      if (track.kind === 'video') {
+        track.applyConstraints({
+          width: width,
+          height: height
+        })
+        // const constraints = track.getCapabilities();
+        // console.log('constraints', constraints);
+      }
+    })
+  }
+
   private onCallClose() {
     this.removedStreamBs?.value.getTracks().forEach((track: any) => {
       track.stop();
@@ -202,6 +296,11 @@ export class CallService {
   }
 
   public closeMediaCall() {
+    if (this.bitrade) {
+      this.bitrade.unsubscribe();
+      this.bytesSent.next(0);
+      this.bytesReceived.next(0);
+    }
     this.mediaCall.close();
     if (!this.mediaCall) {
       this.onCallClose();
@@ -210,6 +309,11 @@ export class CallService {
   }
 
   public destroyPeer() {
+    if (this.bitrade) {
+      this.bitrade.unsubscribe();
+      this.bytesSent.next(0);
+      this.bytesReceived.next(0);
+    }
     this.mediaCall?.close();
     this.peer?.disconnect();
     this.peer?.destroy();
