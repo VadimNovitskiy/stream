@@ -35,11 +35,11 @@
       [disabled]="!(isCallStarted$ | async) || !videoOn">Share Screen
     </mat-slide-toggle>
     
-    <button mat-raised-button color="warn" (click)="endCall()" [disabled]="!(isCallStarted$ | async)">End Call{{isCallStarted$ | async}}</button>
+    <button mat-raised-button color="warn" (click)="endCall()" [disabled]="!(isCallStarted$ | async)">End Call</button>
 
     <mat-form-field appearance="fill">
       <mat-label>Video quality</mat-label>
-      <mat-select (selectionChange)="changeQuality($event.value)" value="720">
+      <mat-select (selectionChange)="changeQuality($event.value)" value="720" [disabled]="!(isCallStarted$ | async)">
         <mat-option value="1280">1280p</mat-option>
         <mat-option value="720">720p</mat-option>
         <mat-option value="480">480p</mat-option>
@@ -50,5 +50,8 @@
       <div class="sent">Bytes sent: {{sentBytes}} Kbps</div>
       <div class="reseived">Bytes received: {{receivedBytes}} Kbps</div>
     </div>
+  </div>
+  <div class="chat">
+    <app-chat></app-chat>
   </div>
 </div>

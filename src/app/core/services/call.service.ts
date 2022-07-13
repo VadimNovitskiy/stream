@@ -16,10 +16,8 @@ export class CallService {
   private removedStreamBs: BehaviorSubject<any> =  new BehaviorSubject(null);
   public remoteStream$ = this.removedStreamBs as Observable<MediaStream>;
   
-  private localMessageBs: BehaviorSubject<any> =  new BehaviorSubject(null);
-  public localMessage$ = this.localMessageBs as Observable<string>;
-  private removedMessageBs: BehaviorSubject<any> =  new BehaviorSubject(null);
-  public remoteMessage$ = this.removedMessageBs as Observable<string>;
+  public localMessageBs: Subject<string> =  new Subject();
+  public removedMessageBs: BehaviorSubject<string> =  new BehaviorSubject('');
 
   private isCallStartedBs = new Subject<boolean>();
   public isCallStarted$ = this.isCallStartedBs as Observable<boolean>;
@@ -70,16 +68,18 @@ export class CallService {
 
       const connection = this.peer.connect(remotePeerId);
 
-      this.peer.on('connection', (peerjsConnection) => {
-        peerjsConnection.on('open', () => {
-          peerjsConnection.on('data', function(data) {
+      connection.on('open', () => {
+        console.log('connection on open');
+        connection.on('data', (data) => {
+          if (data) {
             console.log('Received', data);
-          });
-
-          peerjsConnection.send('Hello from markers-page!');
+            this.removedMessageBs.next(data as string);
+          }
         })
 
-        connection.send('Hello from received')
+        this.localMessageBs.subscribe(message => {
+          connection.send(message);
+        })
       })
 
       connection.on('error', (err) => {
@@ -127,10 +127,26 @@ export class CallService {
         audio: true
       });
 
+      this.peer.on('connection', (peerjsConnection) => {
+        peerjsConnection.on('open', () => {
+          console.log('peerjsConnection on open');
+          peerjsConnection.on('data', (data) => {
+            if (data) {
+              console.log('Received', data);
+              this.removedMessageBs.next(data as string);
+            }
+          });
+
+          this.localMessageBs.subscribe(message => {
+            peerjsConnection.send(message);
+          })
+        })
+      })
+
       let videoStream = new MediaStream;
       videoStream.addTrack(stream.getVideoTracks()[0]);
       this.localStreamBs.next(videoStream);
-      
+
       this.peer.on('call', async (call) => {
         this.mediaCall = call;
         this.isCallStartedBs.next(true);
@@ -231,7 +247,6 @@ export class CallService {
   public async sharedAudio(sharedAudio: boolean) {
     try {
       this.mediaCall.peerConnection?.getSenders().map((sender) => {
-        console.log('Sender', sender);
         if (sender.track?.kind == 'audio') {
           sender.track.enabled = sharedAudio;
         }
@@ -253,22 +268,26 @@ export class CallService {
     let beforeBytesSent = 0;
     let beforeBytesReceived = 0;
     this.bitrade = interval(1000).subscribe(() => {
-      const peerStatus = (defer(() => from(this.mediaCall.peerConnection.getStats())));
-      peerStatus.subscribe((status: RTCStatsReport) => {
-        
-        status.forEach((res) => {
-
-          if (res.id === 'RTCTransport_0_1') {
-            let bytesSentOnSeconds = res.bytesSent - beforeBytesSent;
-            beforeBytesSent = res.bytesSent;
-            let bytesReceivedOnSeconds = res.bytesReceived - beforeBytesReceived;
-            beforeBytesReceived = res.bytesReceived;
-
-            this.bytesSent.next(bytesSentOnSeconds / 10000);
-            this.bytesReceived.next(bytesReceivedOnSeconds / 10000);
-          }
+      if (this.mediaCall.peerConnection) {
+        const peerStatus = (defer(() => from(this.mediaCall.peerConnection.getStats())));
+        peerStatus.subscribe((status: RTCStatsReport) => {
+          
+          status.forEach((res) => {
+  
+            if (res.id === 'RTCTransport_0_1') {
+              let bytesSentOnSeconds = res.bytesSent - beforeBytesSent;
+              beforeBytesSent = res.bytesSent;
+              let bytesReceivedOnSeconds = res.bytesReceived - beforeBytesReceived;
+              beforeBytesReceived = res.bytesReceived;
+  
+              this.bytesSent.next(bytesSentOnSeconds / 10000);
+              this.bytesReceived.next(bytesReceivedOnSeconds / 10000);
+            }
+          });
         });
-      });
+      } else {
+        this.bitrade.unsubscribe();
+      }
     })
   }
 

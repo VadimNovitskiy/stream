@@ -12,12 +12,14 @@ import { AngularFireModule } from '@angular/fire/compat';
 import { AngularFireDatabaseModule } from '@angular/fire/compat/database';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { CallInfoDialogComponent } from './main-stream/components/callinfo-dialog/callinfo-dialog.component';
+import { ChatComponent } from './main-stream/components/chat/chat.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     MainStreamComponent,
-    CallInfoDialogComponent
+    CallInfoDialogComponent,
+    ChatComponent
   ],
   imports: [
     BrowserModule,
