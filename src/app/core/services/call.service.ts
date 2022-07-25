@@ -12,21 +12,25 @@ export class CallService {
   private mediaCall!: MediaConnection;
 
   private localStreamBs: BehaviorSubject<any> =  new BehaviorSubject(null);
-  public localStream$ = this.localStreamBs as Observable<MediaStream>;
+  public localStream$:Observable<MediaStream>;
   private removedStreamBs: BehaviorSubject<any> =  new BehaviorSubject(null);
-  public remoteStream$ = this.removedStreamBs as Observable<MediaStream>;
+  public remoteStream$: Observable<MediaStream>;
   
   public localMessageBs: Subject<string> =  new Subject();
   public removedMessageBs: BehaviorSubject<string> =  new BehaviorSubject('');
 
   private isCallStartedBs = new Subject<boolean>();
-  public isCallStarted$ = this.isCallStartedBs as Observable<boolean>;
+  public isCallStarted$: Observable<boolean>;
 
   public bytesSent = new BehaviorSubject(0);
   public bytesReceived = new BehaviorSubject(0);
   public bitrade!: any;
 
-  constructor(private snackBar: MatSnackBar) {}
+  constructor(private snackBar: MatSnackBar) {
+    this.localStream$ = this.localStreamBs.asObservable();
+    this.remoteStream$ = this.removedStreamBs.asObservable();
+    this.isCallStarted$ = this.isCallStartedBs.asObservable();
+  }
 
   public initPeer(): string | null {
     if (!this.peer || this.peer.disconnected) {
@@ -298,8 +302,6 @@ export class CallService {
           width: width,
           height: height
         })
-        // const constraints = track.getCapabilities();
-        // console.log('constraints', constraints);
       }
     })
   }

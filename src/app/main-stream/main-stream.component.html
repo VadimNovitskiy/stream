@@ -7,39 +7,38 @@
       </div>
     </div>
   </div>
-  <div class="settings">
-    <button mat-raised-button color="primary" (click)="showModal(false)" [disabled]="isCallStarted$ | async">Start Call{{isCallStarted$ | async}}</button>
+  <div class="settings" *ngIf="{ isCallStarted: (isCallStarted$ | async)} as obs">
+    <button mat-raised-button color="primary" (click)="showModal(false)" [disabled]="obs.isCallStarted">Start Call</button>
   
-    <button mat-raised-button (click)="showModal(true)" [disabled]="isCallStarted$ | async">Join Call</button>
-    <button mat-fab [color]="videoOn ? 'primary' : 'warn'" (click)="onVideoClick()" [disabled]="!(isCallStarted$ | async)">
-      <span *ngIf="videoOn">
+    <button mat-raised-button (click)="showModal(true)" [disabled]="obs.isCallStarted">Join Call</button>
+    <button mat-fab [color]="isVideoOn ? 'primary' : 'warn'" (click)="videoSharing()" [disabled]="!(obs.isCallStarted)">
+      <span *ngIf="isVideoOn">
         <mat-icon>videocam</mat-icon>
       </span>
-      <span *ngIf="!videoOn">
+      <span *ngIf="!isVideoOn">
         <mat-icon>videocam_off</mat-icon>
       </span>
     </button>
-    <button mat-fab [color]="audioOn ? 'primary' : 'warn'" (click)="onAudioClick()" [disabled]="!(isCallStarted$ | async)">
-      <span *ngIf="audioOn">
+    <button mat-fab [color]="isAudioOn ? 'primary' : 'warn'" (click)="audioSharing()" [disabled]="!(obs.isCallStarted)">
+      <span *ngIf="isAudioOn">
         <mat-icon>volume_up</mat-icon>
       </span>
-      <span *ngIf="!audioOn">
+      <span *ngIf="!isAudioOn">
         <mat-icon>volume_off</mat-icon>
       </span>
     </button>
-  
     
     <mat-slide-toggle 
       (change)="onScreenShare($event)" 
-      [(ngModel)]="checked"
-      [disabled]="!(isCallStarted$ | async) || !videoOn">Share Screen
+      [(ngModel)]="isChecked"
+      [disabled]="!(obs.isCallStarted) || !isVideoOn">Share Screen
     </mat-slide-toggle>
     
-    <button mat-raised-button color="warn" (click)="endCall()" [disabled]="!(isCallStarted$ | async)">End Call</button>
+    <button mat-raised-button color="warn" (click)="endCall()" [disabled]="!(obs.isCallStarted)">End Call</button>
 
     <mat-form-field appearance="fill">
       <mat-label>Video quality</mat-label>
-      <mat-select (selectionChange)="changeQuality($event.value)" value="720" [disabled]="!(isCallStarted$ | async)">
+      <mat-select (selectionChange)="changeQuality($event.value)" value="720" [disabled]="!(obs.isCallStarted)">
         <mat-option value="1280">1280p</mat-option>
         <mat-option value="720">720p</mat-option>
         <mat-option value="480">480p</mat-option>

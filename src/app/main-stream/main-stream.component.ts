@@ -14,9 +14,9 @@ import { CallInfoDialogComponent } from './components/callinfo-dialog/callinfo-d
 export class MainStreamComponent implements OnInit, OnDestroy {
   public isCallStarted$: Observable<boolean>;
   private peerId: string | null;
-  public videoOn = true;
-  public audioOn = true;
-  checked = false;
+  public isVideoOn = true;
+  public isAudioOn = true;
+  isChecked = false;
 
   public sentBytes: any;
   public receivedBytes: any;
@@ -105,21 +105,21 @@ export class MainStreamComponent implements OnInit, OnDestroy {
   }
 
   public onScreenShare($event: MatSlideToggleChange){
-    this.checked = $event.checked
+    this.isChecked = $event.checked
     this.callService.sharedScreen($event.checked);
   }
 
-  public onVideoClick() {
-    this.videoOn = !this.videoOn;
-    if (this.checked) {
-      this.checked = this.videoOn;
+  public videoSharing() {
+    this.isVideoOn = !this.isVideoOn;
+    if (this.isChecked) {
+      this.isChecked = this.isVideoOn;
     }
-    this.callService.sharedVideo(this.videoOn);
+    this.callService.sharedVideo(this.isVideoOn);
   }
 
-  public onAudioClick() {
-    this.audioOn = !this.audioOn;
-    this.callService.sharedAudio(this.audioOn);
+  public audioSharing() {
+    this.isAudioOn = !this.isAudioOn;
+    this.callService.sharedAudio(this.isAudioOn);
   }
 
   public changeQuality(value: string) {
