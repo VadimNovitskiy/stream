@@ -1,34 +1,72 @@
-<div class="page">
-  <div class="page__container">
-    <div class="main">
-      <div class="main__videos videos-main">
-        <span>
-          <h3>Local Stream</h3>
-          <video class="videos-main__webcam" [src]="localStream" autoplay playsinline></video>
-        </span>
-        <span>
-          <h3>Remote Stream</h3>
-          <video class="videos-main__remote" [src]="remoteStream" autoplay playsinline></video>
-        </span>
-      </div>
-
-      <div class="main__settings settings-main">
-        <button mat-raised-button color="accent" (click)="getUserMedia()" [disabled]="startBtn">Start webcam</button>
-
-        <button mat-raised-button id="callButton" (click)="call()" [disabled]="callBtn">Create Call (offer)</button>
-
-        <!-- <p>Answer the call from a different browser window or device</p> -->
-        
-        <form [formGroup]="createOffer" novalidate>
-          <mat-form-field appearance="outline">
-            <input matInput formControlName="call" [value]="value">
-          </mat-form-field>
-        </form>
-
-        <button mat-raised-button id="answerButton" (click)="answer()" [disabled]="answerBtn">Answer</button>
-
-        <button mat-raised-button id="hangupButton" [disabled]="hangupBtn">Hangup</button>
+<div class="wrapper">
+  <div class="page">
+    <div class="_container">
+      <div class="main">
+        <div #videos style="width: 100%; height: 40rem" class="grid grid-flow-col gap-4" [ngClass]="
+          {
+            'grid-cols-1': arrayOfUsers.length === 1,
+            'grid-cols-2': arrayOfUsers.length > 1 && arrayOfUsers.length <= 4,
+            'grid-cols-3': arrayOfUsers.length > 4 && arrayOfUsers.length <= 9,
+            'grid-cols-4': arrayOfUsers.length > 9
+          }
+        ">
+        </div>
+        <!-- <div #videos class="videos">
+          <ng-template *ngIf="localVideo">
+            <video #local class="video local" autoplay playsinline muted></video>
+          </ng-template>
+          <ng-template *ngFor="let user of arrayOfUsers">
+            <video class="video remote" autoplay playsinline></video>
+          </ng-template>
+        </div> -->
       </div>
     </div>
+  </div>
+  <div class="settings" *ngIf="{ isCallStarted: (isCallStarted$ | async)} as obs">
+    <button mat-raised-button color="primary" (click)="showModal(false)" [disabled]="obs.isCallStarted">Start Call</button>
+  
+    <button mat-raised-button (click)="showModal(true)" [disabled]="obs.isCallStarted">Join Call</button>
+    <button mat-fab [color]="isVideoOn ? 'primary' : 'warn'" (click)="videoSharing()" [disabled]="!(obs.isCallStarted)">
+      <span *ngIf="isVideoOn">
+        <mat-icon>videocam</mat-icon>
+      </span>
+      <span *ngIf="!isVideoOn">
+        <mat-icon>videocam_off</mat-icon>
+      </span>
+    </button>
+    <button mat-fab [color]="isAudioOn ? 'primary' : 'warn'" (click)="audioSharing()" [disabled]="!(obs.isCallStarted)">
+      <span *ngIf="isAudioOn">
+        <mat-icon>volume_up</mat-icon>
+      </span>
+      <span *ngIf="!isAudioOn">
+        <mat-icon>volume_off</mat-icon>
+      </span>
+    </button>
+    
+    <mat-slide-toggle 
+      (change)="screenShare($event)" 
+      [(ngModel)]="isChecked"
+      [disabled]="!(obs.isCallStarted) || !isVideoOn">Share Screen
+    </mat-slide-toggle>
+    
+    <button mat-raised-button color="warn" (click)="endCall()" [disabled]="!(obs.isCallStarted)">End Call</button>
+
+    <mat-form-field appearance="fill">
+      <mat-label>Video quality</mat-label>
+      <mat-select (selectionChange)="changeQuality($event.value)" value="720" [disabled]="!(obs.isCallStarted)">
+        <mat-option value="1280">1280p</mat-option>
+        <mat-option value="720">720p</mat-option>
+        <mat-option value="480">480p</mat-option>
+        <mat-option value="480">320p</mat-option>
+      </mat-select>
+    </mat-form-field>
+  
+    <div class="bitrade">
+      <div class="sent">Bytes sent: {{sentBytes}} Kbps</div>
+      <div class="reseived">Bytes received: {{receivedBytes}} Kbps</div>
+    </div>
+  </div>
+  <div class="chat">
+    <app-chat></app-chat>
   </div>
 </div>

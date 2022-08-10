@@ -10,12 +10,18 @@ import { environment } from '@environments/environment';
 
 import { AngularFireModule } from '@angular/fire/compat';
 import { AngularFireDatabaseModule } from '@angular/fire/compat/database';
-import { ReactiveFormsModule } from '@angular/forms';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
+import { CallInfoDialogComponent } from './main-stream/components/callinfo-dialog/callinfo-dialog.component';
+import { ChatComponent } from './main-stream/components/chat/chat.component';
+import { ZoomDirective } from './main-stream/directives/zoom.directive';
 
 @NgModule({
   declarations: [
     AppComponent,
-    MainStreamComponent
+    MainStreamComponent,
+    CallInfoDialogComponent,
+    ChatComponent,
+    ZoomDirective
   ],
   imports: [
     BrowserModule,
@@ -25,6 +31,7 @@ import { ReactiveFormsModule } from '@angular/forms';
     AngularFireModule.initializeApp(environment.firebase),
     AngularFireDatabaseModule,
     ReactiveFormsModule,
+    FormsModule,
   ],
   providers: [],
   bootstrap: [AppComponent]

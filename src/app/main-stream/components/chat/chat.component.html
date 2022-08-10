@@ -1,0 +1,11 @@
+<div class="container">
+  <div class="list" #scrollChat>
+
+  </div>
+  <div class="input" *ngIf="{ isCallStarted: (isCallStarted$ | async) } as obs">
+    <input matInput #messageInput placeholder="Write message">
+    <button mat-raised-button color="primary" (click)="sendMessage(messageInput.value); messageInput.value=''" [disabled]="!obs.isCallStarted">
+      <mat-icon>send</mat-icon>
+    </button>
+  </div>
+</div>

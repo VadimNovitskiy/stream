@@ -1,51 +1,107 @@
-video {
-  width: 40vw;
-  height: 30vw;
-  margin: 2rem;
-  background: rgb(44, 62, 80);
-}
-h3 {
-  margin: 2rem 0px 0px 2rem;
-}
+@import "/src/assets/scss/_style";
+
 .page {
-  padding: 0 20px;
-
-  // .page__container
-
-  &__container {
-    // margin: 0 auto;
-  }
+  flex: 1 1 auto;
+  margin-top: rem(50);
 }
+
 .main {
-
-  // .main__videos
-
-  &__videos {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-
-  // .main__settings
-
-  &__settings {
-  }
+  // background: black;
 }
-.videos-main {
 
-  // .videos-main__webcam
-
-  &__webcam {
-  }
-
-  // .videos-main__remote
-
-  &__remote {
-  }
+._container {
+  max-width: rem(1000);
 }
-.settings-main {
+
+.videos {
+  display: block;
+  position: relative;
+  // &.grid {
+  //   display: grid;
+  //   gap: rem(20);
+  //   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  //   // grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  //   margin: 0px rem(30);
+  // }
+}
+.video {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 40px;
+  height: 100%;
+  width: 100%;
+}
+
+.local {
+  width: 100%;
+  height: 700px;
+  &.grid {
+    min-width: rem(200);
+  }
+}
+.remote {
+  position: absolute;
+  right: 200px;
+  bottom: 30px;
+  width: 325px;
+  height: 200px;
+  &.grid {
+    position: relative;
+  }
+}
+.settings {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: rem(40);
+  margin: rem(50) 0;
+}
+
+.chat {
+  margin: 0 auto;
+}
+
+
+.h-full {
+  height: 100%;
+}
+.w-full {
+  width: 100%;
+}
+.grid {
+  display: grid;
+}
+.grid-auto-col {
+  grid-auto-flow: column;
+}
+.gap-4 {
+  gap: 1rem
+}
+.grid-cols-1 {
+  grid-template-columns: repeat(1, 1fr);
+}
+.grid-cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+.grid-cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+.grid-cols-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+.text-center {
+  text-align: center;
+}
+.flex {
+  display: flex;
+}
+.items-center {
+  align-items: center;
+}
+.justify-center {
+  justify-content: center;
+}
+.p-4 {
+  padding: 1rem;
 }

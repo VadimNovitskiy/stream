@@ -1,148 +1,175 @@
-import { Component } from '@angular/core';
-import { Servers } from '../models/servers.model';
-import {
-  AngularFirestore,
-  AngularFirestoreDocument
-} from '@angular/fire/compat/firestore';
-import { FormGroup, FormControl } from '@angular/forms';
-import { Offer } from '../models/offer.model';
-import { map } from 'rxjs';
-import { Answer } from '../models/answer.model';
-
-const servers: Servers = {
-  iceServers: [
-    {
-      urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'],
-    },
-  ],
-  iceCandidatePoolSize: 10,
-}
+import { Component, ElementRef, OnDestroy, OnInit, Renderer2, ViewChild } from '@angular/core';
+import { MatDialog } from '@angular/material/dialog';
+import { MatSlideToggleChange } from '@angular/material/slide-toggle';
+import { CallService } from '@core/services/call.service';
+import { filter, Observable, of, switchMap } from 'rxjs';
+import { DialogData } from '../models/dialog-data.model';
+import { CallInfoDialogComponent } from './components/callinfo-dialog/callinfo-dialog.component';
 
 @Component({
   selector: 'app-main-stream',
   templateUrl: './main-stream.component.html',
   styleUrls: ['./main-stream.component.scss']
 })
-export class MainStreamComponent {
-  startBtn = false;
-  callBtn = true;
-  answerBtn = true;
-  hangupBtn = true;
-  localStream: any;
-  remoteStream: any;
-  pc = new RTCPeerConnection(servers);
-  public createOffer: FormGroup;
-  public value = '';
+export class MainStreamComponent implements OnInit, OnDestroy {
+  public isCallStarted$: Observable<boolean>;
+  private peerId: string | null;
+  public isVideoOn = true;
+  public isAudioOn = true;
+  isChecked = false;
 
-  constructor(private firestore: AngularFirestore) {
-    this.createOffer = new FormGroup({
-      call: new FormControl(null),
+  public sentBytes: any;
+  public receivedBytes: any;
+
+  private localSubscription: any;
+  private remoteSubscription: any;
+
+  public localVideo?: MediaStream;
+
+  public arrayOfUsers: MediaStream[] = [];
+
+  @ViewChild('videos') videos!: ElementRef;
+
+  constructor(
+    public dialog: MatDialog, 
+    private callService: CallService, 
+    private renderer: Renderer2,
+    ) {
+    this.isCallStarted$ = this.callService.isCallStarted$;
+    this.peerId = this.callService.initPeer();
+
+    this.callService.bytesSent.subscribe((bytes) => {
+      this.sentBytes = bytes;
     })
+    this.callService.bytesReceived.subscribe((bytes) => {
+      this.receivedBytes = bytes;
+    });
   }
 
-  async getUserMedia() {
-    this.localStream = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: true,
+  ngOnInit(): void {
+    this.isCallStarted$.subscribe((val) => {
+      console.log('isCallStarted$', val);
     })
-
-    this.remoteStream = new MediaStream();
-
-    this.localStream.getTracks().forEach((track: MediaStreamTrack) => {
-      this.pc.addTrack(track, this.localStream);
-    })
-
-    this.pc.ontrack = (event: any) => {
-      event.streams[0].getTracks((track: MediaStreamTrack) => {
-        this.remoteStream.addTrack(track);
-      })
-    }
-
-    this.callBtn = false;
-    this.answerBtn = false;
-    this.startBtn = true;
+    this.getStream();
   }
 
-  async call() {
-    const callDoc = this.firestore.collection('calls').doc();
-    const offerCandidates = callDoc.collection('offerCandidates');
-    const answerCandidates = callDoc.collection('answerCandidates');
-
-    this.value = callDoc.ref.id;
-
-    this.pc.onicecandidate = (event: any) => {
-      // console.log('event', event);
-      // console.log('event.candidate', event.candidate);
-      event.candidate && offerCandidates.add(event.candidate.toJSON());
-    }
-
-    const offerDescription = await this.pc.createOffer();
-    await this.pc.setLocalDescription(offerDescription);
-
-    const offer: Offer = {
-      sdp: offerDescription.sdp,
-      type: offerDescription.type
-    }
-
-    await callDoc.set({offer});
-
-    callDoc.snapshotChanges().subscribe((snapshot) => {
-      const data: any = snapshot.payload.data();
-
-      if (!this.pc.currentRemoteDescription && data.answer) {
-        const answerDescription = new RTCSessionDescription(data.answer);
-        this.pc.setRemoteDescription(answerDescription);
-      }
-
-      answerCandidates.snapshotChanges().pipe(map((changes) => changes.map((change) => {
-
-        if (change.type === 'added') {
-          const candidate = new RTCIceCandidate(change.payload.doc.data());
-          this.pc.addIceCandidate(candidate);
+  public getStream() {
+    this.arrayOfUsers.length = 0;
+    this.localSubscription = this.callService.localStream$
+      .pipe(filter((res: MediaStream) => !!res))
+      .subscribe((stream: MediaStream | null) => {
+        console.log('local', stream);
+        if (stream){
+          this.arrayOfUsers.push(stream);
+          this.createVideoElement('local', stream);
         }
-      })));
+    });
+    this.remoteSubscription = this.callService.remoteStream$
+      .pipe(filter((res: MediaStream) => !!res))
+      .subscribe((stream: MediaStream | null) => {
+        if (stream){
+          if(this.checkUniqueObj(stream)) {
+            this.createVideoElement('remote', stream);
+          } else {
+            return;
+          }
+        }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.callService.destroyPeer();
+  }
+
+  private checkUniqueObj(obj: MediaStream) {
+    const index = this.arrayOfUsers.findIndex((object) => object.id === obj.id);
+
+    if (index === -1) {
+      this.arrayOfUsers.push(obj);
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  private addClass(name: string, elem: ElementRef) {
+    console.log('elem............', elem);
+    this.renderer.addClass(elem, name);
+  }
+
+  private createVideoElement(value: string, stream: MediaStream) {
+    const video = this.renderer.createElement('video');
+    this.renderer.addClass(video, 'video');
+    this.renderer.setAttribute(video, 'autoplay', 'true');
+    this.renderer.setAttribute(video, 'playsinline', 'true');
+    video.srcObject = stream;
+    this.renderer.appendChild(this.videos.nativeElement, video);
+  }
+
+  public showModal(joinCall: boolean): void {
+    let dialogData: DialogData = joinCall ? {peerId: undefined, joinCall: true} : {peerId: this.peerId!, joinCall: false};
+    const dialogRef = this.dialog.open(CallInfoDialogComponent, {
+      width: '250px',
+      data: dialogData
     });
 
-    this.hangupBtn = false;
+    dialogRef.afterClosed()
+      .pipe(
+        switchMap((peerId) => {
+          return joinCall ? of(this.callService.establishMediaCall(peerId)) : of(this.callService.enableCallAnswer());
+        }),
+      )
+      .subscribe(_ => {});
   }
 
-  async answer() {
-    const callId = this.value;
+  public screenShare($event: MatSlideToggleChange){
+    this.isChecked = $event.checked
+    this.callService.sharedScreen($event.checked);
+  }
 
-    const callDoc = this.firestore.collection('calls').doc(callId);
-    const answerCandidates = callDoc.collection('answerCandidates');
-    const offerCandidates = callDoc.collection('offerCandidates');
-    
-    this.pc.onicecandidate = (event: any) => {
-      event.candidate && answerCandidates.add(event.candidate.toJson());
+  public videoSharing() {
+    this.isVideoOn = !this.isVideoOn;
+    if (this.isChecked) {
+      this.isChecked = this.isVideoOn;
     }
+    this.callService.sharedVideo(this.isVideoOn);
+  }
 
-    let callData: any;
-    callDoc.get().subscribe((d) => {
-      callData = d.data();
+  public audioSharing() {
+    console.log('Array', this.arrayOfUsers);
+    this.isAudioOn = !this.isAudioOn;
+    this.callService.sharedAudio(this.isAudioOn);
+  }
+
+  public changeQuality(value: string) {
+    switch (value) {
+      case '1280':
+        this.callService.applyConstraints(1280, 720);
+        break;
+        case '720': 
+        this.callService.applyConstraints(720, 480);
+        break;
+        case '480': 
+        this.callService.applyConstraints(480, 360);
+        break;
+        case '320': 
+        this.callService.applyConstraints(320, 240);
+        break;
+    }
+  }
+
+  public endCall() {
+    this.localSubscription.unsubscribe();
+    this.remoteSubscription.unsubscribe();
+    const video = this.videos.nativeElement.querySelectorAll('video');
+    console.log('Video', video);
+    video.forEach((stream: any) => {
+      console.log('srcObject', stream);
+      stream.srcObject = null;
     })
-
-    if (callData) {
-      const offerDescription = callData.offer; 
-      await this.pc.setRemoteDescription(new RTCSessionDescription(offerDescription));
-    }
-
-    const answerDescription = await this.pc.createAnswer();
-    await this.pc.setLocalDescription(new RTCSessionDescription(answerDescription));
-
-    const answer: Answer = {
-      type: answerDescription.type,
-      sdp: answerDescription.sdp
-    }
-
-    await callDoc.update({answer});
-
-    offerCandidates.snapshotChanges().pipe(map((changes) => changes.map((change) => {
-
-      if (change.type === 'added') {
-        let data = change.payload.doc.data();
-        this.pc.addIceCandidate( new RTCIceCandidate(data));
-      }
-    })));
+    Array.from(document.getElementsByClassName('video')).forEach((video) => {
+      video.remove();
+    })
+    this.callService.closeMediaCall();
   }
 }
