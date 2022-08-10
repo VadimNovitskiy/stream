@@ -13,13 +13,15 @@ import { AngularFireDatabaseModule } from '@angular/fire/compat/database';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { CallInfoDialogComponent } from './main-stream/components/callinfo-dialog/callinfo-dialog.component';
 import { ChatComponent } from './main-stream/components/chat/chat.component';
+import { ZoomDirective } from './main-stream/directives/zoom.directive';
 
 @NgModule({
   declarations: [
     AppComponent,
     MainStreamComponent,
     CallInfoDialogComponent,
-    ChatComponent
+    ChatComponent,
+    ZoomDirective
   ],
   imports: [
     BrowserModule,

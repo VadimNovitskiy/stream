@@ -2,7 +2,7 @@ import { Component, ElementRef, OnDestroy, OnInit, Renderer2, ViewChild } from '
 import { MatDialog } from '@angular/material/dialog';
 import { MatSlideToggleChange } from '@angular/material/slide-toggle';
 import { CallService } from '@core/services/call.service';
-import { distinct, filter, Observable, of, switchMap } from 'rxjs';
+import { filter, Observable, of, switchMap } from 'rxjs';
 import { DialogData } from '../models/dialog-data.model';
 import { CallInfoDialogComponent } from './components/callinfo-dialog/callinfo-dialog.component';
 
@@ -20,6 +20,13 @@ export class MainStreamComponent implements OnInit, OnDestroy {
 
   public sentBytes: any;
   public receivedBytes: any;
+
+  private localSubscription: any;
+  private remoteSubscription: any;
+
+  public localVideo?: MediaStream;
+
+  public arrayOfUsers: MediaStream[] = [];
 
   @ViewChild('videos') videos!: ElementRef;
 
@@ -47,45 +54,56 @@ export class MainStreamComponent implements OnInit, OnDestroy {
   }
 
   public getStream() {
-    this.callService.localStream$
-      .pipe(filter((res: any) => !!res))
-      .subscribe((stream: MediaProvider | null) => {
+    this.arrayOfUsers.length = 0;
+    this.localSubscription = this.callService.localStream$
+      .pipe(filter((res: MediaStream) => !!res))
+      .subscribe((stream: MediaStream | null) => {
         console.log('local', stream);
         if (stream){
-          const video = this.renderer.createElement('video');
-          this.renderer.addClass(video, 'video');
-          this.renderer.addClass(video, 'local');
-          this.renderer.setAttribute(video, 'autoplay', 'true');
-          this.renderer.setAttribute(video, 'playsinline', 'true');
-          this.renderer.setAttribute(video, 'muted', 'true');
-          video.srcObject = stream;
-          this.renderer.appendChild(this.videos.nativeElement, video);
+          this.arrayOfUsers.push(stream);
+          this.createVideoElement('local', stream);
         }
-        // this.localVideo.nativeElement.srcObject = stream;
     });
-    this.callService.remoteStream$
-      .pipe(
-        filter((res: MediaStream) => !!res),
-        distinct((stream) => stream.id)
-        )
+    this.remoteSubscription = this.callService.remoteStream$
+      .pipe(filter((res: MediaStream) => !!res))
       .subscribe((stream: MediaStream | null) => {
-        console.log('stream', stream);
         if (stream){
-          const video = this.renderer.createElement('video');
-          this.renderer.addClass(video, 'video');
-          this.renderer.addClass(video, 'remote');
-          this.renderer.setAttribute(video, 'id', 'videoId');
-          this.renderer.setAttribute(video, 'autoplay', 'true');
-          this.renderer.setAttribute(video, 'playsinline', 'true');
-          video.srcObject = stream;
-          this.renderer.appendChild(this.videos.nativeElement, video);
-          // this.remoteVideo.nativeElement.srcObject = stream
+          if(this.checkUniqueObj(stream)) {
+            this.createVideoElement('remote', stream);
+          } else {
+            return;
+          }
         }
     });
   }
 
   ngOnDestroy(): void {
     this.callService.destroyPeer();
+  }
+
+  private checkUniqueObj(obj: MediaStream) {
+    const index = this.arrayOfUsers.findIndex((object) => object.id === obj.id);
+
+    if (index === -1) {
+      this.arrayOfUsers.push(obj);
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  private addClass(name: string, elem: ElementRef) {
+    console.log('elem............', elem);
+    this.renderer.addClass(elem, name);
+  }
+
+  private createVideoElement(value: string, stream: MediaStream) {
+    const video = this.renderer.createElement('video');
+    this.renderer.addClass(video, 'video');
+    this.renderer.setAttribute(video, 'autoplay', 'true');
+    this.renderer.setAttribute(video, 'playsinline', 'true');
+    video.srcObject = stream;
+    this.renderer.appendChild(this.videos.nativeElement, video);
   }
 
   public showModal(joinCall: boolean): void {
@@ -104,7 +122,7 @@ export class MainStreamComponent implements OnInit, OnDestroy {
       .subscribe(_ => {});
   }
 
-  public onScreenShare($event: MatSlideToggleChange){
+  public screenShare($event: MatSlideToggleChange){
     this.isChecked = $event.checked
     this.callService.sharedScreen($event.checked);
   }
@@ -118,6 +136,7 @@ export class MainStreamComponent implements OnInit, OnDestroy {
   }
 
   public audioSharing() {
+    console.log('Array', this.arrayOfUsers);
     this.isAudioOn = !this.isAudioOn;
     this.callService.sharedAudio(this.isAudioOn);
   }
@@ -133,10 +152,21 @@ export class MainStreamComponent implements OnInit, OnDestroy {
         case '480': 
         this.callService.applyConstraints(480, 360);
         break;
+        case '320': 
+        this.callService.applyConstraints(320, 240);
+        break;
     }
   }
 
   public endCall() {
+    this.localSubscription.unsubscribe();
+    this.remoteSubscription.unsubscribe();
+    const video = this.videos.nativeElement.querySelectorAll('video');
+    console.log('Video', video);
+    video.forEach((stream: any) => {
+      console.log('srcObject', stream);
+      stream.srcObject = null;
+    })
     Array.from(document.getElementsByClassName('video')).forEach((video) => {
       video.remove();
     })

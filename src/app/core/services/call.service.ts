@@ -184,9 +184,11 @@ export class CallService {
   public async sharedScreen(sharedScreen: boolean) {
     try {
       let stream: MediaStream;
-      // this.localStreamBs?.value.getTracks().forEach((track: MediaStreamTrack) => {
-      //   this.localStreamBs?.value.removeTrack(track);
-      // })
+      this.localStreamBs?.value.getTracks().forEach((track: MediaStreamTrack) => {
+        track.stop();
+        console.log('value track', track);
+        // this.localStreamBs?.value.removeTrack(track);
+      })
       if (sharedScreen){
         stream = await navigator.mediaDevices.getDisplayMedia({
           audio: true, 
@@ -313,6 +315,8 @@ export class CallService {
     this.localStreamBs?.value.getTracks().forEach((track: any) => {
       track.stop();
     });
+    this.removedStreamBs.next(null);
+    this.localStreamBs.next(null);
     this.snackBar.open('Call Ended', 'Close');
   }
 
@@ -322,11 +326,11 @@ export class CallService {
       this.bytesSent.next(0);
       this.bytesReceived.next(0);
     }
-    this.mediaCall.close();
     if (!this.mediaCall) {
       this.onCallClose();
     }
     this.isCallStartedBs.next(false);
+    this.destroyPeer();
   }
 
   public destroyPeer() {

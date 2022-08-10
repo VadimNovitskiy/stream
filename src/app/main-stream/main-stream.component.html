@@ -2,8 +2,23 @@
   <div class="page">
     <div class="_container">
       <div class="main">
-        <div #videos class="videos">
+        <div #videos style="width: 100%; height: 40rem" class="grid grid-flow-col gap-4" [ngClass]="
+          {
+            'grid-cols-1': arrayOfUsers.length === 1,
+            'grid-cols-2': arrayOfUsers.length > 1 && arrayOfUsers.length <= 4,
+            'grid-cols-3': arrayOfUsers.length > 4 && arrayOfUsers.length <= 9,
+            'grid-cols-4': arrayOfUsers.length > 9
+          }
+        ">
         </div>
+        <!-- <div #videos class="videos">
+          <ng-template *ngIf="localVideo">
+            <video #local class="video local" autoplay playsinline muted></video>
+          </ng-template>
+          <ng-template *ngFor="let user of arrayOfUsers">
+            <video class="video remote" autoplay playsinline></video>
+          </ng-template>
+        </div> -->
       </div>
     </div>
   </div>
@@ -29,7 +44,7 @@
     </button>
     
     <mat-slide-toggle 
-      (change)="onScreenShare($event)" 
+      (change)="screenShare($event)" 
       [(ngModel)]="isChecked"
       [disabled]="!(obs.isCallStarted) || !isVideoOn">Share Screen
     </mat-slide-toggle>
@@ -42,6 +57,7 @@
         <mat-option value="1280">1280p</mat-option>
         <mat-option value="720">720p</mat-option>
         <mat-option value="480">480p</mat-option>
+        <mat-option value="480">320p</mat-option>
       </mat-select>
     </mat-form-field>
   
